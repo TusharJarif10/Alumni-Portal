@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@plugin "daisyui" {
+  themes: faith --default;
+ }
+
+ 
+
+
+
+ @plugin "daisyui/theme" {
+  name: "faith";
+  default: true;
+  prefersdark: false;
+  color-scheme: "light";
+  --color-base-100: oklch(27% 0.033 256.848);
+  --color-base-200: oklch(43% 0.046 257.417);
+  --color-base-300: oklch(66% 0.179 58.318);
+  --color-base-content: oklch(96% 0.059 95.617);
+  --color-primary: oklch(59% 0.249 0.584);
+  --color-primary-content: oklch(96% 0.059 95.617);
+  --color-secondary: oklch(37% 0.146 265.522);
+  --color-secondary-content: oklch(96% 0.059 95.617);
+  --color-accent: oklch(84% 0.238 128.85);
+  --color-accent-content: oklch(29% 0.066 243.157);
+  --color-neutral: oklch(93% 0.127 124.321);
+  --color-neutral-content: oklch(29% 0.066 243.157);
+  --color-info: oklch(52% 0.154 150.069);
+  --color-info-content: oklch(96% 0.059 95.617);
+  --color-success: oklch(64.8% 0.15 160);
+  --color-success-content: oklch(96% 0.059 95.617);
+  --color-warning: oklch(84.71% 0.199 83.87);
+  --color-warning-content: oklch(0% 0 0);
+  --color-error: oklch(71.76% 0.221 22.18);
+  --color-error-content: oklch(0% 0 0);
+  --radius-selector: 1rem;
+  --radius-field: 1rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 1;
+}
+
+.root{
+  font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+}
+
+
+* {
+  cursor: url('/cursor1.png') 8 8,  auto;
+}
+
