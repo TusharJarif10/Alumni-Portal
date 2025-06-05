@@ -1,21 +1,28 @@
 import { NextResponse } from "next/server";
-import { query } from "@/lib/db";
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
 
 // Fetch all blogs
 export async function GET() {
   try {
-    const result = await query(`
-      SELECT * FROM blogs 
-      ORDER BY "createdAt" DESC
-    `);
+    const { data, error } = await supabase
+      .from('blogs')
+      .select('*')
+      .order('createdAt', { ascending: false });
 
-    return NextResponse.json(result.rows);
+    if (error) {
+      console.error("Supabase error fetching blogs:", error);
+      return NextResponse.json({ error: "Failed to fetch blogs" }, { status: 500 });
+    }
+
+    return NextResponse.json(data);
   } catch (error) {
-    console.error("Error fetching blogs:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch blogs" },
-      { status: 500 }
-    );
+    console.error("Unexpected error fetching blogs:", error);
+    return NextResponse.json({ error: "Failed to fetch blogs" }, { status: 500 });
   }
 }
 
@@ -32,24 +39,33 @@ export async function POST(req) {
       );
     }
 
-    const result = await query(
-      `INSERT INTO blogs (title, content, "authorEmail", "createdAt")    
-       VALUES ($1, $2, $3, NOW())
-       RETURNING *`,
-      [title, content, authorEmail]
-    );
+    // Insert new blog post
+    const { data, error } = await supabase
+      .from('blogs')
+      .insert([{ title, content, authorEmail, createdAt: new Date().toISOString() }])
+      .select()
+      .single();
 
-    return NextResponse.json(result.rows[0], { status: 201 });
-  } catch (error) {
-    console.error("Error creating blog:", error);
+    if (error) {
+      console.error("Supabase error creating blog:", error);
 
-    if (error.code === '23505') {
+      // Check for unique violation (adjust based on your Supabase/Postgres config)
+      if (error.code === '23505') {
+        return NextResponse.json(
+          { error: "Blog with this title already exists" },
+          { status: 409 }
+        );
+      }
+
       return NextResponse.json(
-        { error: "Blog with this title already exists" },
-        { status: 409 }
+        { error: "Failed to create blog" },
+        { status: 500 }
       );
     }
 
+    return NextResponse.json(data, { status: 201 });
+  } catch (error) {
+    console.error("Unexpected error creating blog:", error);
     return NextResponse.json(
       { error: "Failed to create blog" },
       { status: 500 }
