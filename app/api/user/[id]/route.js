@@ -1,20 +1,19 @@
+// app/api/user/[id]/route.js
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma'; // Adjust the import if your prisma client lives elsewhere
+import { query } from '@/lib/db';
 
 // GET /api/user/[id]
 export async function GET(request, { params }) {
   const { id } = params;
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id },
-    });
+    const result = await query('SELECT * FROM users WHERE id = $1', [id]);
 
-    if (!user) {
+    if (result.rows.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json(user);
+    return NextResponse.json(result.rows[0]);
   } catch (error) {
     console.error('GET user error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -22,43 +21,56 @@ export async function GET(request, { params }) {
 }
 
 // PUT /api/user/[id]
-
-
 export async function PUT(request, { params }) {
-  const { id } = params;  // Get the user ID from the URL params
-  const data = await request.json();  // Get the updated user data
+  const { id } = params;
+  const data = await request.json();
 
   try {
+    const result = await query(
+      `UPDATE users SET 
+        name = $1,
+        email = $2,
+        registration_no = $3,
+        date_of_birth = $4,
+        role = $5
+       WHERE id = $6
+       RETURNING *`,
+      [
+        data.name,
+        data.email,
+        data.registrationNo,
+        new Date(data.dateOfBirth),
+        data.role,
+        id
+      ]
+    );
 
-  
-    // Find and update the user in the database
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: {
-        name: data.name,
-        email: data.email,
-        registrationNo: data.registrationNo,
-        dateOfBirth: new Date(data.dateOfBirth),  // Ensure it's a valid Date
-        role: data.role,
-      },
-    });
+    if (result.rows.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
 
-    return NextResponse.json(updatedUser);
+    return NextResponse.json(result.rows[0]);
   } catch (error) {
-    console.error("Error updating user:", error);
+    console.error("PUT user error:", error);
+
+    if (error.code === '23505' && error.constraint === 'User_email_key') {
+      return NextResponse.json({ error: 'Email already exists' }, { status: 400 });
+    }
+
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
 }
-
 
 // DELETE /api/user/[id]
 export async function DELETE(request, { params }) {
   const { id } = params;
 
   try {
-    await prisma.user.delete({
-      where: { id },
-    });
+    const result = await query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
+
+    if (result.rowCount === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

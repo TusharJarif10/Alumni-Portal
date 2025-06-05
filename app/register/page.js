@@ -1,12 +1,11 @@
-"use client"
+"use client";
+
 import { useState } from "react";
 import Link from "next/link";
-import axios from "axios";
 
-
-// Sample dataset of valid registration numbers (replace with your actual data)
+// Dataset of valid registration numbers
 const validRegistrationNos = [
-"2011581072",
+  "2011581072",
 "2011581074",
 "2011581075",
 "2011581077",
@@ -76,8 +75,6 @@ const validRegistrationNos = [
 "2011581131"
 ];
 
-
-
 export default function Register() {
   const [name, setName] = useState("");
   const [registrationNo, setRegistrationNo] = useState("");
@@ -88,53 +85,46 @@ export default function Register() {
   const [error, setError] = useState("");
   const [regerror, setRegerror] = useState("");
 
-  // Email validation function
-  const validateEmail = (value) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(value);
-  };
-
-  const handleEmailChange = (e) => {
-    const value = e.target.value;
-    setEmail(value);
-  };
+  const validateEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
   const handleRegister = async () => {
     if (!name || !registrationNo || !dateOfBirth || !email || !password) {
       alert("Please fill in all fields.");
       return;
     }
+
     if (!validateEmail(email)) {
       setError("Invalid email format.");
       return;
     }
 
-     // Check if the registration number exists in the valid dataset
-     if (!validRegistrationNos.includes(registrationNo)) {
+    if (!validRegistrationNos.includes(registrationNo)) {
       setRegerror("Invalid registration number.");
       return;
     }
 
     setError("");
+    setRegerror("");
     setLoader(true);
 
     try {
-      let res = await fetch("/api/payment/initiate", {
+      // Optionally save user data to localStorage to use after success
+      localStorage.setItem("pendingUser", JSON.stringify({ name, email, registrationNo, dateOfBirth, password }));
+
+      const res = await fetch("/api/payment/initiate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name, registrationNo, dateOfBirth, email, password }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email }), // only sending what backend expects
       });
 
-      let json = await res.json();
-
+      const json = await res.json();
       setLoader(false);
 
-      if (json.success && json.url) {
+      if (json.url) {
         window.location.href = json.url;
       } else {
         alert("Payment initiation failed. Please try again.");
+        console.log(json.details || json.error);
       }
     } catch (error) {
       console.error("Error initiating payment:", error);
@@ -146,86 +136,81 @@ export default function Register() {
   return (
     <div className="bg-base-100 min-h-screen flex items-center justify-center">
       <div className="w-full max-w-md p-8 space-y-6 rounded-lg shadow-lg bg-gradient-to-r from-base-200 to-secondary border-base-300 text-white/70">
-        <h1 className="text-3xl font-bold text-center ">Register for Alumni Portal</h1>
+        <h1 className="text-3xl font-bold text-center">Register for Alumni Portal</h1>
 
         <div>
-          <label htmlFor="name" className="block text-sm font-medium ">Full Name</label>
+          <label htmlFor="name" className="block text-sm font-medium">Full Name</label>
           <input
             type="text"
             id="name"
-            placeholder="Enter your full name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-4 py-2 mt-2 rounded-lg border "
-            required
+            placeholder="Enter your full name"
+            className="w-full px-4 py-2 mt-2 rounded-lg border"
           />
         </div>
 
         <div>
-          <label htmlFor="registrationNo" className="block text-sm font-medium ">Registration Number</label>
+          <label htmlFor="registrationNo" className="block text-sm font-medium">Registration Number</label>
           <input
             type="text"
             id="registrationNo"
-            placeholder="Enter your registration number"
             value={registrationNo}
             onChange={(e) => setRegistrationNo(e.target.value)}
-            className="w-full px-4 py-2 mt-2  rounded-lg border "
-            required
+            placeholder="Enter your registration number"
+            className="w-full px-4 py-2 mt-2 rounded-lg border"
           />
           {regerror && <p className="text-red-500 text-sm mt-1">{regerror}</p>}
         </div>
 
         <div>
-          <label htmlFor="dateOfBirth" className="block text-sm font-medium ">Date of Birth</label>
+          <label htmlFor="dateOfBirth" className="block text-sm font-medium">Date of Birth</label>
           <input
             type="date"
             id="dateOfBirth"
             value={dateOfBirth}
             onChange={(e) => setDateOfBirth(e.target.value)}
             className="w-full px-4 py-2 mt-2 rounded-lg border"
-            required
           />
         </div>
 
         <div>
-          <label htmlFor="email" className="block text-sm font-medium ">Email Address</label>
+          <label htmlFor="email" className="block text-sm font-medium">Email Address</label>
           <input
             type="email"
             id="email"
-            placeholder="Enter your email"
             value={email}
-            onChange={handleEmailChange}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
             className="w-full px-4 py-2 mt-2 rounded-lg border"
-            required
           />
           {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium ">Password</label>
+          <label htmlFor="password" className="block text-sm font-medium">Password</label>
           <input
             type="password"
             id="password"
-            placeholder="Enter your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
             className="w-full px-4 py-2 mt-2 rounded-lg border"
-            required
           />
         </div>
 
         <button
           onClick={handleRegister}
-          className="w-full py-2 mt-4 btn font-semibold rounded-lg shadow-lg bg-neutral/60 text-warning-content hover:bg-primary-focus focus:outline-none focus:ring-2 focus:ring-primary"
           disabled={loader}
+          className="w-full py-2 mt-4 btn font-semibold rounded-lg shadow-lg bg-neutral/60 text-warning-content hover:bg-primary-focus focus:outline-none focus:ring-2 focus:ring-primary"
         >
           {loader ? "Processing..." : "Register"}
         </button>
 
-        <p className="text-center text-sm ">
-          Already have an account?{' '}
+        <p className="text-center text-sm">
+          Already have an account?{" "}
           <Link href="/login">
-            <button className="text-warning font-semibold hover:underline">Login here</button>
+            <span className="text-warning font-semibold hover:underline cursor-pointer">Login here</span>
           </Link>
         </p>
       </div>

@@ -1,16 +1,21 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma"; // Ensure this exists in lib/prisma.js
+import { query } from "@/lib/db";
 
 // Fetch all blogs
 export async function GET() {
   try {
-    const blogs = await prisma.blog.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-    return NextResponse.json(blogs);
+    const result = await query(`
+      SELECT * FROM blogs 
+      ORDER BY "createdAt" DESC
+    `);
+
+    return NextResponse.json(result.rows);
   } catch (error) {
     console.error("Error fetching blogs:", error);
-    return NextResponse.json({ error: "Failed to fetch blogs" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch blogs" },
+      { status: 500 }
+    );
   }
 }
 
@@ -21,16 +26,33 @@ export async function POST(req) {
     const { title, content, authorEmail } = body;
 
     if (!title || !content || !authorEmail) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
     }
 
-    const blog = await prisma.blog.create({
-      data: { title, content, authorEmail },
-    });
+    const result = await query(
+      `INSERT INTO blogs (title, content, "authorEmail", "createdAt")    
+       VALUES ($1, $2, $3, NOW())
+       RETURNING *`,
+      [title, content, authorEmail]
+    );
 
-    return NextResponse.json(blog, { status: 201 });
+    return NextResponse.json(result.rows[0], { status: 201 });
   } catch (error) {
     console.error("Error creating blog:", error);
-    return NextResponse.json({ error: "Failed to create blog" }, { status: 500 });
+
+    if (error.code === '23505') {
+      return NextResponse.json(
+        { error: "Blog with this title already exists" },
+        { status: 409 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: "Failed to create blog" },
+      { status: 500 }
+    );
   }
 }

@@ -1,74 +1,56 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import bcrypt from "bcryptjs";
 
 export const POST = async (req) => {
   try {
-    const { name, registrationNo, dateOfBirth, email, password } = await req.json();
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const { email, name } = await req.json();
+    const transactionId = "TXN_" + Date.now();
 
-    const transactionId = "T" + new Date().getTime(); // Unique transaction ID
-
-    console.log("📢 Creating user in database with Transaction ID:", transactionId);
-
-    await db.user.create({
-      data: {
-        name,
-        registrationNo,
-        dateOfBirth: new Date(dateOfBirth), // ← Convert string to Date
-        email,
-        password: hashedPassword,
-        transactionId,
-        status: "PENDING",
-      },
-    });
-
-    // SSLCOMMERZ Credentials
-    const store_id = process.env.SSLCOMMERZ_STORE_ID;
-    const store_passwd = process.env.SSLCOMMERZ_STORE_PASSWD;
-
-    if (!store_id || !store_passwd) {
-      throw new Error("⚠️ SSLCOMMERZ credentials missing");
-    }
-
-    const post_data = {
-      store_id,
-      store_passwd,
-      total_amount: "500",
+    const data = {
+      store_id: process.env.SSLCOMMERZ_STORE_ID,
+      store_passwd: process.env.SSLCOMMERZ_STORE_PASSWD,
+      total_amount: 500,
       currency: "BDT",
       tran_id: transactionId,
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/payment/success`,
       fail_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/payment/fail`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/payment/cancel`,
+      ipn_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/payment/ipn`,
       cus_name: name,
       cus_email: email,
-      product_name: "Alumni Registration",
-      product_category: "Registration",
+      cus_add1: "Dhaka",
+      cus_city: "Dhaka",  
+      cus_country: "bangla",
+      cus_phone: "01711111198",
+      shipping_method: "NO",
+      product_name: "Alumni Portal Access",
+      product_category: "Digital",
       product_profile: "general",
-      cus_country: "Bangladesh",
+      value_a: email,
     };
 
-    console.log("📢 Sending request to SSLCOMMERZ with data:", post_data);
+    // Convert data to URL-encoded form
+    const formData = new URLSearchParams();
+    for (const key in data) {
+      formData.append(key, data[key]);
+    }
 
-    // Send request to SSLCOMMERZ
-    const sslRes = await fetch("https://sandbox.sslcommerz.com/gwprocess/v3/api.php", {
+    const response = await fetch("https://sandbox.sslcommerz.com/gwprocess/v4/api.php", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams(post_data).toString(),
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formData.toString(),
     });
 
-    console.log("📢 SSLCOMMERZ Response Status:", sslRes.status);
+    const result = await response.json();
 
-    const sslResJSON = await sslRes.json();
-    console.log("📢 SSLCOMMERZ Response JSON:", sslResJSON);
-
-    if (sslResJSON?.GatewayPageURL) {
-      return NextResponse.json({ success: true, url: sslResJSON.GatewayPageURL });
+    if (result?.GatewayPageURL) {
+      return NextResponse.json({ url: result.GatewayPageURL });
     } else {
-      throw new Error(sslResJSON?.error || "Failed to get payment URL");
+      return NextResponse.json({ error: "Failed to get payment URL", details: result }, { status: 500 });
     }
   } catch (error) {
-    console.error("❌ Error in Payment API:", error.message);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error("SSLCOMMERZ INIT ERROR:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 };
