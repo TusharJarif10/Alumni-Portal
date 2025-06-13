@@ -291,8 +291,8 @@ export default function Home() {
        
 
         <span className="block text-sm text-center text-neutral">© 2021-2022 Landwind™. All Rights Reserved. Developed by
-          <a href="https://github.com/TusharJarif10"
-            className="text-base-300 hover:underline"> TusharJarif10</a>
+          <a href="https://github.com/"
+            className="text-base-300 hover:underline"> rakib-rocks</a>
          
         </span>
 
